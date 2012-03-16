@@ -23,13 +23,22 @@ class AttachmentSizeValidatorTest < Test::Unit::TestCase
     end
   end
 
-  def self.should_not_allow_attachment_file_size(size)
+  def self.should_not_allow_attachment_file_size(size, options = {})
     context "when the attachment size is #{size}" do
-      should "add error to dummy object" do
+      setup do
         @dummy.stubs(:avatar_file_size).returns(size)
         @validator.validate(@dummy)
+      end
+
+      should "add error to dummy object" do
         assert @dummy.errors[:avatar_file_size].present?,
           "Unexpected error message on :avatar_file_size"
+      end
+
+      if options[:message]
+        should "return a correct error message" do
+          assert_include @dummy.errors[:avatar_file_size], options[:message]
+        end
       end
     end
   end
@@ -57,117 +66,114 @@ class AttachmentSizeValidatorTest < Test::Unit::TestCase
   end
 
   context "with :greater_than option" do
-    setup do
-      build_validator :greater_than => 10.kilobytes
+    context "as number" do
+      setup do
+        build_validator :greater_than => 10.kilobytes
+      end
+
+      should_allow_attachment_file_size 11.kilobytes
+      should_not_allow_attachment_file_size 10.kilobytes
     end
 
-    should_allow_attachment_file_size 11.kilobytes
-    should_not_allow_attachment_file_size 10.kilobytes
+    context "as a proc" do
+      setup do
+        build_validator :greater_than => lambda { |avatar| 10.kilobytes }
+      end
+
+      should_allow_attachment_file_size 11.kilobytes
+      should_not_allow_attachment_file_size 10.kilobytes
+    end
   end
 
   context "with :less_than option" do
-    setup do
-      build_validator :less_than => 10.kilobytes
+    context "as number" do
+      setup do
+        build_validator :less_than => 10.kilobytes
+      end
+
+      should_allow_attachment_file_size 9.kilobytes
+      should_not_allow_attachment_file_size 10.kilobytes
     end
 
-    should_allow_attachment_file_size 9.kilobytes
-    should_not_allow_attachment_file_size 10.kilobytes
+    context "as a proc" do
+      setup do
+        build_validator :less_than => lambda { |avatar| 10.kilobytes }
+      end
+
+      should_allow_attachment_file_size 9.kilobytes
+      should_not_allow_attachment_file_size 10.kilobytes
+    end
   end
 
   context "with :greater_than and :less_than option" do
-    setup do
-      build_validator :greater_than => 5.kilobytes, :less_than => 10.kilobytes
+    context "as numbers" do
+      setup do
+        build_validator :greater_than => 5.kilobytes,
+          :less_than => 10.kilobytes
+      end
+
+      should_allow_attachment_file_size 7.kilobytes
+      should_not_allow_attachment_file_size 5.kilobytes
+      should_not_allow_attachment_file_size 10.kilobytes
     end
 
-    should_allow_attachment_file_size 7.kilobytes
-    should_not_allow_attachment_file_size 5.kilobytes
-    should_not_allow_attachment_file_size 10.kilobytes
+    context "as a proc" do
+      setup do
+        build_validator :greater_than => lambda { |avatar| 5.kilobytes },
+          :less_than => lambda { |avatar| 10.kilobytes }
+      end
+
+      should_allow_attachment_file_size 7.kilobytes
+      should_not_allow_attachment_file_size 5.kilobytes
+      should_not_allow_attachment_file_size 10.kilobytes
+    end
   end
 
   context "with :message option" do
     context "given a range" do
       setup do
-        @validator = Paperclip::Validators::AttachmentSizeValidator.new(
-          :attributes => :avatar_file_size,
-          :in => (5.kilobytes..10.kilobytes),
+        build_validator :in => (5.kilobytes..10.kilobytes),
           :message => "is invalid. (Between %{min} and %{max} please.)"
-        )
       end
 
-      should "return a correct message" do
-        @dummy.stubs(:avatar_file_size).returns(11.kilobytes)
-        @validator.validate(@dummy)
-        assert_include @dummy.errors[:avatar_file_size], "is invalid. (Between 5120 Bytes and 10240 Bytes please.)"
-      end
+      should_not_allow_attachment_file_size 11.kilobytes,
+        :message => "is invalid. (Between 5120 Bytes and 10240 Bytes please.)"
     end
 
     context "given :less_than and :greater_than" do
       setup do
-        @validator = Paperclip::Validators::AttachmentSizeValidator.new(
-          :attributes => :avatar_file_size,
-          :less_than => 10.kilobytes,
+        build_validator :less_than => 10.kilobytes,
           :greater_than => 5.kilobytes,
           :message => "is invalid. (Between %{min} and %{max} please.)"
-        )
       end
 
-      should "return a correct message" do
-        @dummy.stubs(:avatar_file_size).returns(11.kilobytes)
-        @validator.validate(@dummy)
-        assert_include @dummy.errors[:avatar_file_size], "is invalid. (Between 5120 Bytes and 10240 Bytes please.)"
-      end
+      should_not_allow_attachment_file_size 11.kilobytes,
+        :message => "is invalid. (Between 5120 Bytes and 10240 Bytes please.)"
     end
   end
 
   context "default error messages" do
     context "given :less_than and :greater_than" do
       setup do
-        @validator = Paperclip::Validators::AttachmentSizeValidator.new(
-          :attributes => :avatar_file_size,
-          :greater_than => 5.kilobytes,
+        build_validator :greater_than => 5.kilobytes,
           :less_than => 10.kilobytes
-        )
       end
 
-      context "for file that is too large" do
-        should "return a correct message" do
-          @dummy.stubs(:avatar_file_size).returns(11.kilobytes)
-          @validator.validate(@dummy)
-          assert_include @dummy.errors[:avatar_file_size], "must be less than 10240 Bytes"
-        end
-      end
-
-      context "for file that is too small" do
-        should "return a correct message" do
-          @dummy.stubs(:avatar_file_size).returns(4.kilobytes)
-          @validator.validate(@dummy)
-          assert_include @dummy.errors[:avatar_file_size], "must be greater than 5120 Bytes"
-        end
-      end
+      should_not_allow_attachment_file_size 11.kilobytes,
+        :message => "must be less than 10240 Bytes"
+      should_not_allow_attachment_file_size 4.kilobytes,
+        :message => "must be greater than 5120 Bytes"
     end
+
     context "given a size range" do
       setup do
-        @validator = Paperclip::Validators::AttachmentSizeValidator.new(
-          :attributes => :avatar_file_size,
-          :in => (5.kilobytes..10.kilobytes)
-        )
+        build_validator :in => (5.kilobytes..10.kilobytes)
       end
 
-      context "for file that is too large" do
-        should "return a correct message" do
-          @dummy.stubs(:avatar_file_size).returns(11.kilobytes)
-          @validator.validate(@dummy)
-          assert_include @dummy.errors[:avatar_file_size], "must be in between 5120 Bytes and 10240 Bytes"
-        end
-      end
-
-      context "for file that is too small" do
-        should "return a correct message" do
-          @dummy.stubs(:avatar_file_size).returns(4.kilobytes)
-          @validator.validate(@dummy)
-          assert_include @dummy.errors[:avatar_file_size], "must be in between 5120 Bytes and 10240 Bytes"
-        end
-      end
+      should_not_allow_attachment_file_size 11.kilobytes,
+        :message => "must be in between 5120 Bytes and 10240 Bytes"
+      should_not_allow_attachment_file_size 4.kilobytes,
+        :message => "must be in between 5120 Bytes and 10240 Bytes"
     end
   end
 end
