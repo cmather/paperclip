@@ -179,11 +179,29 @@ class AttachmentSizeValidatorTest < Test::Unit::TestCase
 
   context "using the helper" do
     setup do
-      Dummy.validates_attachment_size :avatar
+      Dummy.validates_attachment_size :avatar, :in => (5.kilobytes..10.kilobytes)
     end
 
     should "add the validator to the class" do
       assert Dummy.validators_on(:avatar).any?{ |validator| validator.kind == :attachment_size }
+    end
+  end
+
+  context "given options" do
+    should "raise argument error if no required argument was given" do
+      assert_raises(ArgumentError) do
+        build_validator :message => "Some message"
+      end
+    end
+
+    (Paperclip::Validators::AttachmentSizeValidator::AVAILABLE_CHECKS).each do |argument|
+      should "not raise arguemnt error if #{argument} was given" do
+        build_validator argument => 5.kilobytes
+      end
+    end
+
+    should "not raise argument error if :in was given" do
+      build_validator :in => (5.kilobytes..10.kilobytes)
     end
   end
 end
