@@ -103,4 +103,14 @@ class AttachmentContentTypeValidatorTest < Test::Unit::TestCase
       end
     end
   end
+
+  context "using the helper" do
+    setup do
+      Dummy.validates_attachment_content_type :avatar
+    end
+
+    should "add the validator to the class" do
+      assert Dummy.validators_on(:avatar).any?{ |validator| validator.kind == :attachment_content_type }
+    end
+  end
 end

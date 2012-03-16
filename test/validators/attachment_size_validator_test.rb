@@ -176,4 +176,14 @@ class AttachmentSizeValidatorTest < Test::Unit::TestCase
         :message => "must be in between 5120 Bytes and 10240 Bytes"
     end
   end
+
+  context "using the helper" do
+    setup do
+      Dummy.validates_attachment_size :avatar
+    end
+
+    should "add the validator to the class" do
+      assert Dummy.validators_on(:avatar).any?{ |validator| validator.kind == :attachment_size }
+    end
+  end
 end

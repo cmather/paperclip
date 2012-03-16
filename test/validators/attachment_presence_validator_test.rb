@@ -72,4 +72,14 @@ class AttachmentPresenceValidatorTest < Test::Unit::TestCase
       assert @dummy.errors[:avatar_file_name].blank?
     end
   end
+
+  context "using the helper" do
+    setup do
+      Dummy.validates_attachment_presence :avatar
+    end
+
+    should "add the validator to the class" do
+      assert Dummy.validators_on(:avatar).any?{ |validator| validator.kind == :attachment_presence }
+    end
+  end
 end
