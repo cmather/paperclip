@@ -37,7 +37,7 @@ class AttachmentSizeValidatorTest < Test::Unit::TestCase
 
       if options[:message]
         should "return a correct error message" do
-          assert_include @dummy.errors[:avatar_file_size], options[:message]
+          assert_includes @dummy.errors[:avatar_file_size], options[:message]
         end
       end
     end

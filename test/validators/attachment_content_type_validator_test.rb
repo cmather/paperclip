@@ -60,7 +60,7 @@ class AttachmentContentTypeValidatorTest < Test::Unit::TestCase
 
       should "set a correct default error message" do
         assert @dummy.errors[:avatar_content_type].present?
-        assert_include @dummy.errors[:avatar_content_type], "is invalid"
+        assert_includes @dummy.errors[:avatar_content_type], "is invalid"
       end
     end
 
@@ -73,7 +73,7 @@ class AttachmentContentTypeValidatorTest < Test::Unit::TestCase
 
       should "set a correct default error message" do
         assert @dummy.errors[:avatar_content_type].present?
-        assert_include @dummy.errors[:avatar_content_type], "is invalid"
+        assert_includes @dummy.errors[:avatar_content_type], "is invalid"
       end
     end
 
@@ -86,7 +86,7 @@ class AttachmentContentTypeValidatorTest < Test::Unit::TestCase
         end
 
         should "set a correct error message" do
-          assert_include @dummy.errors[:avatar_content_type], "should be a PNG image"
+          assert_includes @dummy.errors[:avatar_content_type], "should be a PNG image"
         end
       end
 
@@ -98,7 +98,7 @@ class AttachmentContentTypeValidatorTest < Test::Unit::TestCase
         end
 
         should "set a correct error message" do
-          assert_include @dummy.errors[:avatar_content_type], "should have content type image/png"
+          assert_includes @dummy.errors[:avatar_content_type], "should have content type image/png"
         end
       end
     end
