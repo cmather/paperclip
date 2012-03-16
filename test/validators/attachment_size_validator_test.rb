@@ -8,7 +8,7 @@ class AttachmentSizeValidatorTest < Test::Unit::TestCase
 
   def build_validator(options)
     @validator = Paperclip::Validators::AttachmentSizeValidator.new(options.merge(
-      :attributes => :avatar_file_size
+      :attributes => :avatar
     ))
   end
 

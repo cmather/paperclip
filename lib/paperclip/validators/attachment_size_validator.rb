@@ -6,22 +6,27 @@ module Paperclip
       AVAILABLE_CHECKS = [:less_than, :less_than_or_equal_to, :greater_than, :greater_than_or_equal_to]
 
       def initialize(options)
-        extract_options(options.reverse_merge!(:allow_nil => true))
+        extract_options(options)
         super
       end
 
       def validate_each(record, attr_name, value)
-        options.slice(*AVAILABLE_CHECKS).each do |option, option_value|
-          option_value = option_value.call(record) if option_value.is_a?(Proc)
-          option_value = extract_option_value(option, option_value)
+        attr_name = "#{attr_name}_file_size".to_sym
+        value = record.send(:read_attribute_for_validation, attr_name)
 
-          unless value.send(CHECKS[option], option_value)
-            error_message_key = options[:in] ? :in_between : option
-            record.errors.add(attr_name, error_message_key, filtered_options(value).merge(
-              :min => min_value_in_human_size(record),
-              :max => max_value_in_human_size(record),
-              :count => human_size(option_value)
-            ))
+        unless value.blank?
+          options.slice(*AVAILABLE_CHECKS).each do |option, option_value|
+            option_value = option_value.call(record) if option_value.is_a?(Proc)
+            option_value = extract_option_value(option, option_value)
+
+            unless value.send(CHECKS[option], option_value)
+              error_message_key = options[:in] ? :in_between : option
+              record.errors.add(attr_name, error_message_key, filtered_options(value).merge(
+                :min => min_value_in_human_size(record),
+                :max => max_value_in_human_size(record),
+                :count => human_size(option_value)
+              ))
+            end
           end
         end
       end
@@ -84,10 +89,7 @@ module Paperclip
       #   be run if this lambda or method returns true.
       # * +unless+: Same as +if+ but validates if lambda or method returns false.
       def validates_attachment_size(*attr_names)
-        options = attr_names.extract_options!
-        options.merge!(:attributes => attr_names.flatten.map{ |attr_name| "#{attr_name}_file_size" })
-
-        validates_with AttachmentSizeValidator, options
+        validates_with AttachmentSizeValidator, _merge_attributes(attr_names)
       end
     end
   end
