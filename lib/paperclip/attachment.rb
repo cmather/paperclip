@@ -90,40 +90,60 @@ module Paperclip
     #   new_user.avatar = old_user.avatar
     def assign uploaded_file
       ensure_required_accessors!
-
+      is_hash = false
+      attributes = {}
+      
       if uploaded_file.is_a?(Paperclip::Attachment)
-        uploaded_filename = uploaded_file.original_filename
+        attributes[:file_name] = uploaded_file.original_filename
         uploaded_file = uploaded_file.to_file(:original)
         close_uploaded_file = uploaded_file.respond_to?(:close)
+      elsif uploaded_file.is_a?(Hash)
+        is_hash = true
+        attributes[:file_name] = uploaded_file[:original_filename]
+        attributes[:content_type] = uploaded_file[:content_type] || ""
+        attributes[:file_size] = uploaded_file[:file_size] || 0
       else
         instance_write(:uploaded_file, uploaded_file) if uploaded_file
       end
 
-      return nil unless valid_assignment?(uploaded_file)
 
-      uploaded_file.binmode if uploaded_file.respond_to? :binmode
-      self.clear
-
-      return nil if uploaded_file.nil?
-
-      uploaded_filename ||= uploaded_file.original_filename
-      stores_fingerprint             = @instance.respond_to?("#{name}_fingerprint".to_sym)
-      @queued_for_write[:original]   = to_tempfile(uploaded_file)
-      instance_write(:file_name,       cleanup_filename(uploaded_filename.strip))
-      instance_write(:content_type,    uploaded_file.content_type.to_s.strip)
-      instance_write(:file_size,       uploaded_file.size.to_i)
-      instance_write(:fingerprint,     generate_fingerprint(uploaded_file)) if stores_fingerprint
-      instance_write(:updated_at,      Time.now)
+      if is_hash
+        self.clear
+      else
+        return nil unless valid_assignment?(uploaded_file)
+        uploaded_file.binmode if uploaded_file.respond_to? :binmode
+        return nil if uploaded_file.nil?
+        
+        self.clear
+        
+        uploaded_filename ||= uploaded_file.original_filename
+        
+        stores_fingerprint             = @instance.respond_to?("#{name}_fingerprint".to_sym)
+        @queued_for_write[:original]   = to_tempfile(uploaded_file)
+        attributes[:file_size] = uploaded_file.size.to_i
+        instance_write(:fingerprint,     generate_fingerprint(uploaded_file)) if stores_fingerprint
+      end
+      
+      assign_db_attributes(attributes)
 
       @dirty = true
 
-      post_process(*@options[:only_process]) if post_processing
+      unless is_hash
+        post_process(*@options[:only_process]) if post_processing
 
-      # Reset the file size if the original file was reprocessed.
-      instance_write(:file_size,   @queued_for_write[:original].size.to_i)
-      instance_write(:fingerprint, generate_fingerprint(@queued_for_write[:original])) if stores_fingerprint
+        # Reset the file size if the original file was reprocessed.
+        instance_write(:file_size,   @queued_for_write[:original].size.to_i)
+        instance_write(:fingerprint, generate_fingerprint(@queued_for_write[:original])) if stores_fingerprint
+      end
     ensure
       uploaded_file.close if close_uploaded_file
+    end
+    
+    def assign_db_attributes(attributes)
+      instance_write(:file_name, cleanup_filename(attributes[:file_name].strip))
+      instance_write(:content_type, attributes[:content_type].to_s.strip)
+      instance_write(:file_size, attributes[:file_size].to_i)
+      instance_write(:updated_at, Time.now)
     end
 
     # Returns the public URL of the attachment with a given style. This does
